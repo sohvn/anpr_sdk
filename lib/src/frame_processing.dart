@@ -198,7 +198,8 @@ Future<Float32List> buildYoloInputAsync(FrameData frame, Letterbox lb) {
 
 Float32List buildYoloInput(FrameData f, Letterbox lb) {
   const size = AnprInternals.yoloSize;
-  final out = Float32List(3 * size * size);
+  const plane = size * size;
+  final out = Float32List(3 * plane);
   out.fillRange(0, out.length, 114 / 255.0);
 
   final maxX = f.rotatedWidth - 1;
@@ -210,11 +211,10 @@ Float32List buildYoloInput(FrameData f, Letterbox lb) {
     for (int ox = lb.padX; ox < lb.padX + lb.resizedW; ox++) {
       final rx = math.min(maxX, ((ox - lb.padX + 0.5) / lb.scale).floor());
       final c = f.rgbAtRotated(rx, ry);
-      final idx = (oy * size + ox) * 3;
-      // Supplied detector expects NHWC RGB float input in [0, 1].
+      final idx = oy * size + ox;
       out[idx] = ((c >> 16) & 0xFF) * inv;
-      out[idx + 1] = ((c >> 8) & 0xFF) * inv;
-      out[idx + 2] = (c & 0xFF) * inv;
+      out[plane + idx] = ((c >> 8) & 0xFF) * inv;
+      out[2 * plane + idx] = (c & 0xFF) * inv;
     }
   }
   return out;
@@ -242,9 +242,11 @@ Float32List? buildOcrInput(FrameData f, Rect box) {
 
   const h = AnprInternals.ocrHeight;
   const maxW = AnprInternals.ocrMaxWidth;
+  const plane = h * maxW;
+
   final newW = math.max(1, math.min(maxW, (cw * h / ch).toInt()));
 
-  final out = Float32List(3 * h * maxW);
+  final out = Float32List(3 * plane);
   out.fillRange(0, out.length, AnprInternals.ocrPadValue);
 
   double norm(int v) => ((v / 255.0) - 0.5) / 0.5;
@@ -274,11 +276,11 @@ Float32List? buildOcrInput(FrameData f, Rect box) {
         return a * (1 - fy) + b * fy;
       }
 
-      final idx = (y * maxW + x) * 3;
-      // Supplied OCR model expects NHWC BGR normalized to [-1, 1].
+      final idx = y * maxW + x;
+      // Model expects BGR order (trained with cv2.imread).
       out[idx] = norm(mix(0).round()); // B
-      out[idx + 1] = norm(mix(8).round()); // G
-      out[idx + 2] = norm(mix(16).round()); // R
+      out[plane + idx] = norm(mix(8).round()); // G
+      out[2 * plane + idx] = norm(mix(16).round()); // R
     }
   }
   return out;

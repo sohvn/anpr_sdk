@@ -37,36 +37,55 @@ class AnprSdk {
   AnprSdkConfig get config => _config;
   bool get isReady => status.value == AnprSdkStatus.ready && _engine != null;
 
-  /// Loads the TFLite models bundled as Flutter package assets.
+  /// Downloads (first run only) and loads the models.
   ///
-  /// No model download, API token, network connection, or checksum is needed.
   /// Safe to call repeatedly: returns immediately once ready, and concurrent
-  /// calls share one initialization run.
+  /// calls share one run. Throws [AnprException] on failure; call again to
+  /// retry. After the first successful run the models are cached and this
+  /// works fully offline.
   Future<void> initialize({
-    @Deprecated('Bundled local models do not require an API token.')
-    String apiToken = '',
+    required String apiToken,
     AnprSdkConfig config = const AnprSdkConfig(),
     void Function(String status)? onStatus,
   }) {
     if (isReady) return Future<void>.value();
     return _initFuture ??= _doInitialize(
+      apiToken,
       config,
       onStatus,
     ).whenComplete(() => _initFuture = null);
   }
 
   Future<void> _doInitialize(
+    String apiToken,
     AnprSdkConfig config,
     void Function(String status)? onStatus,
   ) async {
     status.value = AnprSdkStatus.initializing;
     lastError = null;
 
-    const manager = ModelManager();
+    final manager = ModelManager(
+      apiToken: apiToken,
+      workerUrl: config.workerUrl,
+    );
+
+    Future<ModelFiles> load() => manager.loadModels(
+      onStatus: onStatus,
+      onProgress: (p) => downloadProgress.value = p,
+    );
 
     try {
-      final files = await manager.loadModels(onStatus: onStatus);
-      final engine = await AnprEngine.create(files, config);
+      var files = await load();
+      AnprEngine engine;
+      try {
+        engine = await AnprEngine.create(files, config);
+      } catch (e) {
+        // Cached files may be corrupt: wipe and download once more.
+        debugPrint('ANPR: model load failed ($e), re-downloading');
+        await manager.clearCache();
+        files = await load();
+        engine = await AnprEngine.create(files, config);
+      }
 
       await _engine?.close();
       _engine = engine;

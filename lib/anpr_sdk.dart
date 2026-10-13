@@ -1,7 +1,7 @@
 /// Plug-and-play number plate detection and recognition.
 ///
 /// ```dart
-/// await AnprSdk.instance.initialize();
+/// await AnprSdk.instance.initialize(apiToken: '...');
 ///
 /// AnprScannerView(onPlate: (r) => print(r.plateNumber));
 /// ```
