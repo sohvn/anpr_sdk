@@ -1,6 +1,6 @@
 name: anpr_sdk
 description: Plug-and-play number plate detection and recognition (ANPR) for Flutter apps.
-version: 1.0.0
+version: 1.1.0
 homepage:
 
 environment:
@@ -9,12 +9,9 @@ environment:
 
 dependencies:
   camera: ^0.12.1
-  cryptography: ^2.9.0
   flutter:
     sdk: flutter
-  flutter_onnxruntime: ^1.9.0
-  http: ^1.6.0
-  path_provider: ^2.1.6
+  flutter_litert: ^3.9.4
 
 dev_dependencies:
   flutter_test:
@@ -26,6 +23,8 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/models/
 
   # To add assets to your package, add an assets section, like this:
   # assets:

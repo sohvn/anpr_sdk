@@ -10,3 +10,9 @@ dependencies:
     sdk: flutter
   anpr_sdk:
     path: ../
+  flutter_litert: ^3.9.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

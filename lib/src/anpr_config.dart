@@ -1,46 +1,21 @@
-/// Tuning options. Every field has a sensible default, so most apps never
-/// need to create one.
+/// Tuning options for the on-device ANPR pipeline.
+///
+/// Both TFLite models are bundled with this Flutter package. Initialization
+/// does not download models, require an API token, or need network access.
 class AnprSdkConfig {
-  /// Model-key service. Override only if you self-host it.
-  final String workerUrl;
-
-  /// Minimum YOLO confidence to accept a plate box.
   final double detectionThreshold;
-
-  /// Minimum gap between two detection runs.
   final Duration detectionInterval;
-
-  /// Minimum gap between two OCR runs.
   final Duration ocrInterval;
-
-  /// OCR reads below this confidence are ignored.
   final double ocrMinConfidence;
-
-  /// OCR reads shorter than this are ignored.
   final int ocrMinLength;
-
-  /// Keep the box on screen this long if one frame misses.
   final Duration boxGrace;
-
-  /// Clear the plate text if no plate was seen for this long.
   final Duration textClear;
-
-  /// Window used to vote between noisy OCR reads.
   final Duration voteWindow;
-
-  /// Max number of recent reads kept for voting.
   final int voteMaxReads;
-
-  /// How many times the same plate must be read before it is "confirmed"
-  /// and reported through onPlate / AnprScanner.plates.
   final int confirmReads;
-
-  /// A plate that stays in view is reported again only after this long.
-  /// A plate that leaves the view and comes back is reported again at once.
   final Duration repeatCooldown;
 
   const AnprSdkConfig({
-    this.workerUrl = 'https://anpr-model-key.sohvn-7-github.workers.dev',
     this.detectionThreshold = 0.35,
     this.detectionInterval = const Duration(milliseconds: 150),
     this.ocrInterval = const Duration(milliseconds: 400),
@@ -54,36 +29,30 @@ class AnprSdkConfig {
     this.repeatCooldown = const Duration(seconds: 5),
   })  : assert(confirmReads >= 1),
         assert(confirmReads <= voteMaxReads);
-}
 
-/// Model/pipeline constants. These must match the trained models, so they are
-/// not user-configurable and not exported from the package.
-class AnprInternals {
-  AnprInternals._();
-
-  static const String modelVersion = 'v1.0.0';
-
-  static const String yoloUrl =
-      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0/best.onnx.enc';
-  static const String ocrUrl =
-      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0/anpr_ocr_f16.onnx.enc';
-  static const String dictUrl =
-      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0/en_dict.txt.enc';
-
-  static const String yoloFileName = 'best.onnx';
-  static const String ocrFileName = 'anpr_ocr_f16.onnx';
-  static const String dictFileName = 'en_dict.txt';
-
-  static const int yoloSize = 640;
-  static const int plateClassId = 0;
-
+  /// Model dimensions and preprocessing constants for the supplied models.
+  static const int detectorSize = 960;
   static const int ocrHeight = 48;
   static const int ocrMaxWidth = 320;
   static const int ocrClasses = 64;
-
-  /// Value written to the padded (unused) right side of the OCR tensor.
   static const double ocrPadValue = -1.0;
+  static const double cropPadding = 0.0;
+}
 
-  /// Extra margin around the detected box before OCR (fraction of box size).
-  static const double cropPadding = 0.06;
+/// Internal fixed dimensions for the bundled TFLite models.
+class AnprInternals {
+  AnprInternals._();
+  static const int yoloSize = 960;
+  static const int plateClassId = 0;
+  static const int ocrHeight = 48;
+  static const int ocrMaxWidth = 320;
+  static const int ocrClasses = 64;
+  static const double ocrPadValue = -1.0;
+  static const double cropPadding = 0.0;
+
+  /// Package asset paths. These are resolved by Flutter's asset bundle.
+  static const String detectorAsset =
+      'packages/anpr_sdk/assets/models/plate_det_int8_dynamic.tflite';
+  static const String recognitionAsset =
+      'packages/anpr_sdk/assets/models/plate_rec_float16.tflite';
 }

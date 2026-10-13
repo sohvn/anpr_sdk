@@ -2,13 +2,13 @@ enum AnprErrorCode {
   /// AnprSdk.instance.initialize() was not called (or has not finished).
   notInitialized,
 
-  /// First-run model download needs internet and none was available.
+  /// Reserved for compatibility with older SDK versions; local models need no internet.
   noInternet,
 
-  /// The API token was rejected by the model service.
+  /// Reserved for compatibility with older SDK versions; no API token is used.
   authFailed,
 
-  /// Models could not be downloaded, decrypted or loaded.
+  /// Bundled TFLite models could not be loaded or initialized.
   modelSetupFailed,
 
   /// The bytes passed to recognizeImage() could not be decoded.
