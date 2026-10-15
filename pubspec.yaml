@@ -1,6 +1,6 @@
 name: anpr_sdk
 description: Plug-and-play number plate detection and recognition (ANPR) for Flutter apps.
-version: 1.0.0
+version: 1.0.1
 repository: https://github.com/sohvn/anpr_sdk
 issue_tracker: https://github.com/sohvn/anpr_sdk/issues
 homepage:
