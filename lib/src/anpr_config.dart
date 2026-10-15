@@ -48,8 +48,8 @@ class AnprSdkConfig {
     this.voteMaxReads = 7,
     this.confirmReads = 2,
     this.repeatCooldown = const Duration(seconds: 5),
-  })  : assert(confirmReads >= 1),
-        assert(confirmReads <= voteMaxReads);
+  }) : assert(confirmReads >= 1),
+       assert(confirmReads <= voteMaxReads);
 }
 
 /// Model/pipeline constants. These must match the trained models, so they are
@@ -60,7 +60,7 @@ class AnprInternals {
   static const String modelVersion = 'v1.0.0';
 
   static const String _releaseBase =
-      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0';
+      'https://github.com/sohvn/anpr_sdk/releases/download/v1.0.2';
 
   static const String yoloUrl = '$_releaseBase/best.onnx';
   static const String ocrUrl = '$_releaseBase/anpr_ocr_f16.onnx';

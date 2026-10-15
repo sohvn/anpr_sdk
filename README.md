@@ -6,6 +6,15 @@ Drop in one widget and get live plate reads from the camera, or pass in a photo
 and get the plate text back. Everything runs **on-device** with ONNX models:
 no per-scan API calls, no server, and it works offline after the first launch.
 
+## Demo App
+
+Try the ANPR SDK demo on an Android device.
+
+[**Download PlateX Demo APK**](https://github.com/sohvn/anpr_sdk/releases/download/v1.0.2/PlateX.apk)
+
+> **Note:** Android only. Allow installation from this source if prompted. The app requires internet access on first launch to download the recognition models; subsequent use works offline.
+
+
 ## Features
 
 - **Live scanning**: `AnprScannerView` is a ready-made camera preview with a
