@@ -1,9 +1,6 @@
 /// Tuning options. Every field has a sensible default, so most apps never
 /// need to create one.
 class AnprSdkConfig {
-  /// Model-key service. Override only if you self-host it.
-  final String workerUrl;
-
   /// Minimum YOLO confidence to accept a plate box.
   final double detectionThreshold;
 
@@ -40,7 +37,6 @@ class AnprSdkConfig {
   final Duration repeatCooldown;
 
   const AnprSdkConfig({
-    this.workerUrl = 'https://anpr-model-key.sohvn-7-github.workers.dev',
     this.detectionThreshold = 0.35,
     this.detectionInterval = const Duration(milliseconds: 150),
     this.ocrInterval = const Duration(milliseconds: 400),
@@ -63,12 +59,12 @@ class AnprInternals {
 
   static const String modelVersion = 'v1.0.0';
 
-  static const String yoloUrl =
-      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0/best.onnx.enc';
-  static const String ocrUrl =
-      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0/anpr_ocr_f16.onnx.enc';
-  static const String dictUrl =
-      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0/en_dict.txt.enc';
+  static const String _releaseBase =
+      'https://github.com/sohvn/anpr-models/releases/download/v1.0.0';
+
+  static const String yoloUrl = '$_releaseBase/best.onnx';
+  static const String ocrUrl = '$_releaseBase/anpr_ocr_f16.onnx';
+  static const String dictUrl = '$_releaseBase/en_dict.txt';
 
   static const String yoloFileName = 'best.onnx';
   static const String ocrFileName = 'anpr_ocr_f16.onnx';

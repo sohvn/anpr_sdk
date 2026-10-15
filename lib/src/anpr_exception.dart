@@ -5,10 +5,7 @@ enum AnprErrorCode {
   /// First-run model download needs internet and none was available.
   noInternet,
 
-  /// The API token was rejected by the model service.
-  authFailed,
-
-  /// Models could not be downloaded, decrypted or loaded.
+  /// Models could not be downloaded or loaded.
   modelSetupFailed,
 
   /// The bytes passed to recognizeImage() could not be decoded.

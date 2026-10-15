@@ -3,10 +3,18 @@ description: Minimal example for anpr_sdk.
 publish_to: none
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ^3.13.5
 
 dependencies:
   flutter:
     sdk: flutter
   anpr_sdk:
     path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

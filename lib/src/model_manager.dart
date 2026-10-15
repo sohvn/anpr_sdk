@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:cryptography/cryptography.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -47,16 +44,10 @@ class _DownloadTarget {
   const _DownloadTarget(this.url, this.destination);
 }
 
-/// Owns model authorization, encrypted downloads, AES-GCM decryption and
-/// version-keyed local caching.
-///
-/// Authorization is isolated here so the Bearer token can later be replaced by
-/// Play Integrity / App Attest without touching the rest of the SDK.
+/// Downloads the plain (unencrypted) models from the GitHub release on first
+/// run and caches them locally, keyed by model version.
 class ModelManager {
-  final String apiToken;
-  final String workerUrl;
-
-  ModelManager({required this.apiToken, required this.workerUrl});
+  ModelManager();
 
   Future<Directory> _modelDir() async {
     final base = await getApplicationSupportDirectory();
@@ -93,24 +84,13 @@ class ModelManager {
       dictPath: dictPath,
     );
 
-    // Cached: works fully offline, token not needed.
+    // Cached: works fully offline.
     if (await yoloFile.exists() &&
         await ocrFile.exists() &&
         await dictFile.exists()) {
       onStatus?.call('READY');
       return files;
     }
-
-    if (apiToken.trim().isEmpty) {
-      throw const AnprException(
-        AnprErrorCode.authFailed,
-        'apiToken is empty. Pass your token to AnprSdk.instance.initialize().',
-      );
-    }
-
-    onStatus?.call('Getting things ready…');
-    final secretKey = await _fetchKey();
-    final aes = AesGcm.with256bits();
 
     onStatus?.call('Getting required files…');
     final downloads = <_DownloadTarget>[
@@ -131,11 +111,9 @@ class ModelManager {
           ? 'Almost ready…'
           : 'Getting things ready…');
       try {
-        await _downloadDecryptFile(
+        await _downloadFile(
           url: target.url,
           destination: target.destination,
-          aes: aes,
-          secretKey: secretKey,
           knownTotalBytes: totals[i],
           completedBytesBefore: completedBytes,
           totalBytes: totalBytes,
@@ -161,96 +139,6 @@ class ModelManager {
     return files;
   }
 
-  Future<SecretKey> _fetchKey() async {
-    late final http.Response response;
-    try {
-      response = await http.post(
-        Uri.parse('$workerUrl/v1/model-key'),
-        headers: {
-          'Authorization': 'Bearer $apiToken',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 20));
-    } on SocketException {
-      throw const AnprException(
-        AnprErrorCode.noInternet,
-        'Internet connection required for first-time setup.',
-      );
-    } on TimeoutException {
-      throw const AnprException(
-        AnprErrorCode.noInternet,
-        'Internet connection required for first-time setup.',
-      );
-    } on http.ClientException {
-      throw const AnprException(
-        AnprErrorCode.noInternet,
-        'Internet connection required for first-time setup.',
-      );
-    } catch (e) {
-      throw AnprException(
-        AnprErrorCode.modelSetupFailed,
-        'Could not connect to the model service.',
-        cause: e,
-      );
-    }
-
-    if (response.statusCode == 401 || response.statusCode == 403) {
-      throw const AnprException(
-        AnprErrorCode.authFailed,
-        'The API token is invalid or has expired.',
-      );
-    }
-    if (response.statusCode != 200) {
-      throw AnprException(
-        AnprErrorCode.modelSetupFailed,
-        'Model authorization failed (${response.statusCode}).',
-      );
-    }
-
-    final json = jsonDecode(response.body);
-    if (json is! Map<String, dynamic> || json['ok'] != true) {
-      throw const AnprException(
-        AnprErrorCode.modelSetupFailed,
-        'Invalid model authorization response.',
-      );
-    }
-
-    final returnedVersion = json['modelVersion']?.toString();
-    if (returnedVersion != AnprInternals.modelVersion) {
-      throw AnprException(
-        AnprErrorCode.modelSetupFailed,
-        'Model version mismatch: server=$returnedVersion, '
-        'sdk=${AnprInternals.modelVersion}. Update the SDK.',
-      );
-    }
-
-    final keyB64 = json['key']?.toString();
-    if (keyB64 == null || keyB64.isEmpty) {
-      throw const AnprException(
-        AnprErrorCode.modelSetupFailed,
-        'Model key missing from server response.',
-      );
-    }
-
-    final expiresAt = (json['expiresAt'] as num?)?.toInt();
-    if (expiresAt != null &&
-        DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiresAt) {
-      throw const AnprException(
-        AnprErrorCode.authFailed,
-        'Model authorization has expired.',
-      );
-    }
-
-    final keyBytes = base64Decode(keyB64);
-    if (keyBytes.length != 32) {
-      throw AnprException(
-        AnprErrorCode.modelSetupFailed,
-        'Invalid AES-256 key length: ${keyBytes.length} bytes.',
-      );
-    }
-    return SecretKey(keyBytes);
-  }
-
   Future<List<int>> _resolveDownloadTotals(
     List<_DownloadTarget> downloads,
   ) async {
@@ -274,17 +162,17 @@ class ModelManager {
     return totals;
   }
 
-  Future<void> _downloadDecryptFile({
+  Future<void> _downloadFile({
     required String url,
     required File destination,
-    required AesGcm aes,
-    required SecretKey secretKey,
     required int knownTotalBytes,
     required int completedBytesBefore,
     required int totalBytes,
     void Function(DownloadProgress progress)? onProgress,
   }) async {
     final client = http.Client();
+    final temp = File('${destination.path}.tmp');
+    IOSink? sink;
     try {
       late final http.StreamedResponse response;
       try {
@@ -319,11 +207,13 @@ class ModelManager {
       final responseLength = response.contentLength ?? 0;
       final expectedBytes =
           responseLength > 0 ? responseLength : knownTotalBytes;
-      final builder = BytesBuilder(copy: false);
+
+      // Stream straight to disk (models are large; no need to hold them in RAM).
+      sink = temp.openWrite();
       var received = 0;
 
       await for (final chunk in response.stream) {
-        builder.add(chunk);
+        sink.add(chunk);
         received += chunk.length;
         final effectiveTotal =
             totalBytes > 0 ? totalBytes : (expectedBytes > 0 ? expectedBytes : 0);
@@ -335,30 +225,24 @@ class ModelManager {
         ));
       }
 
-      final encrypted = builder.takeBytes();
-      if (encrypted.length < 12 + 16) {
+      await sink.flush();
+      await sink.close();
+      sink = null;
+
+      if (received == 0 || (responseLength > 0 && received != responseLength)) {
         throw const AnprException(
           AnprErrorCode.modelSetupFailed,
-          'Encrypted model is too small.',
+          'Model download was incomplete.',
         );
       }
 
-      // Layout: [12-byte nonce][ciphertext][16-byte GCM tag]
-      final nonce = encrypted.sublist(0, 12);
-      final cipherText = encrypted.sublist(12, encrypted.length - 16);
-      final macBytes = encrypted.sublist(encrypted.length - 16);
-      final box = SecretBox(cipherText, nonce: nonce, mac: Mac(macBytes));
-      final plaintext = await aes.decrypt(box, secretKey: secretKey);
-
-      final temp = File('${destination.path}.tmp');
-      try {
-        await temp.writeAsBytes(plaintext, flush: true);
-        await temp.rename(destination.path);
-      } finally {
-        if (await temp.exists()) await temp.delete();
-      }
+      await temp.rename(destination.path);
     } finally {
       client.close();
+      try {
+        await sink?.close();
+      } catch (_) {}
+      if (await temp.exists()) await temp.delete();
     }
   }
 }

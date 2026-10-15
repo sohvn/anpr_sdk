@@ -44,30 +44,24 @@ class AnprSdk {
   /// retry. After the first successful run the models are cached and this
   /// works fully offline.
   Future<void> initialize({
-    required String apiToken,
     AnprSdkConfig config = const AnprSdkConfig(),
     void Function(String status)? onStatus,
   }) {
     if (isReady) return Future<void>.value();
     return _initFuture ??= _doInitialize(
-      apiToken,
       config,
       onStatus,
     ).whenComplete(() => _initFuture = null);
   }
 
   Future<void> _doInitialize(
-    String apiToken,
     AnprSdkConfig config,
     void Function(String status)? onStatus,
   ) async {
     status.value = AnprSdkStatus.initializing;
     lastError = null;
 
-    final manager = ModelManager(
-      apiToken: apiToken,
-      workerUrl: config.workerUrl,
-    );
+    final manager = ModelManager();
 
     Future<ModelFiles> load() => manager.loadModels(
       onStatus: onStatus,

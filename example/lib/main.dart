@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:anpr_sdk/anpr_sdk.dart';
 import 'package:flutter/material.dart';
 
-/// Run with:
-///   flutter run --dart-define=ANPR_TOKEN=your_token
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -12,7 +10,7 @@ Future<void> main() async {
   // progress by itself, so there is no need to await this.
   unawaited(
     AnprSdk.instance
-        .initialize(apiToken: const String.fromEnvironment('ANPR_TOKEN'))
+        .initialize()
         .catchError((Object e) => debugPrint('ANPR init failed: $e')),
   );
 
